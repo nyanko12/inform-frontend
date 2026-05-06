@@ -78,14 +78,18 @@ class _SignScreenState extends ConsumerState<SignScreen> {
     try {
       final auth = ref.read(authServiceProvider);
       final cred = await auth.signInWithGoogle();
-      // Web: cred == null のためリダイレクトが発生、ページ遷移するのでここには戻らない
       if (cred != null) {
+        // ネイティブアプリの場合
         final api = ref.read(apiServiceProvider);
         final token = await auth.getIdToken();
         if (token != null) api.setAuthToken(token);
         final user = cred.user;
         if (user != null) await api.register(user.uid, user.email ?? '');
         if (mounted) context.go('/home');
+      } else {
+        // Webリダイレクト: ページ遷移するはずだが失敗した場合はリセット
+        await Future.delayed(const Duration(seconds: 3));
+        if (mounted) setState(() => _loading = false);
       }
     } catch (e) {
       if (mounted) setState(() { _error = e.toString(); _loading = false; });
