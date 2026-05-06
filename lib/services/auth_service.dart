@@ -23,9 +23,18 @@ class AuthService {
 
   Future<UserCredential?> signInWithGoogle() async {
     if (kIsWeb) {
-      // Web（PC・モバイル共通）はリダイレクト方式で確実に動作させる
-      await _auth.signInWithRedirect(GoogleAuthProvider());
-      return null; // リダイレクト後に getRedirectResult() で受け取る
+      final provider = GoogleAuthProvider();
+      try {
+        // まずpopupを試みる（PC・モバイル新タブどちらも対応）
+        return await _auth.signInWithPopup(provider);
+      } on FirebaseAuthException catch (e) {
+        // ポップアップがブロックされた場合のみリダイレクトにフォールバック
+        if (e.code == 'popup-blocked' || e.code == 'popup-closed-by-user') {
+          await _auth.signInWithRedirect(provider);
+          return null;
+        }
+        rethrow;
+      }
     }
 
     if (_googleSignIn == null) return null;
@@ -39,11 +48,13 @@ class AuthService {
     return _auth.signInWithCredential(credential);
   }
 
-  // リダイレクト後の結果を取得（モバイルWeb専用）
+  // リダイレクト後の結果を取得
   Future<UserCredential?> getRedirectResult() async {
     if (!kIsWeb) return null;
     try {
-      final result = await _auth.getRedirectResult();
+      final result = await _auth
+          .getRedirectResult()
+          .timeout(const Duration(seconds: 5));
       return result.user != null ? result : null;
     } catch (_) {
       return null;

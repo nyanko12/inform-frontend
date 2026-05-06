@@ -21,13 +21,13 @@ class _SignScreenState extends ConsumerState<SignScreen> {
     _checkRedirectResult();
   }
 
-  // モバイルブラウザのリダイレクト後に呼ばれる
+  // リダイレクト後の結果を受け取る（signInWithRedirectのフォールバック時）
   Future<void> _checkRedirectResult() async {
-    final auth = ref.read(authServiceProvider);
-    final cred = await auth.getRedirectResult();
-    if (cred == null || !mounted) return;
-    setState(() => _loading = true);
     try {
+      final auth = ref.read(authServiceProvider);
+      final cred = await auth.getRedirectResult();
+      if (cred == null || !mounted) return;
+      setState(() => _loading = true);
       final api = ref.read(apiServiceProvider);
       final token = await auth.getIdToken();
       if (token != null) api.setAuthToken(token);
@@ -35,7 +35,10 @@ class _SignScreenState extends ConsumerState<SignScreen> {
       if (user != null) await api.register(user.uid, user.email ?? '');
       if (mounted) context.go('/home');
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      // ナビゲーション済みなら mounted = false になるので安全
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -79,20 +82,18 @@ class _SignScreenState extends ConsumerState<SignScreen> {
       final auth = ref.read(authServiceProvider);
       final cred = await auth.signInWithGoogle();
       if (cred != null) {
-        // ネイティブアプリの場合
         final api = ref.read(apiServiceProvider);
         final token = await auth.getIdToken();
         if (token != null) api.setAuthToken(token);
         final user = cred.user;
         if (user != null) await api.register(user.uid, user.email ?? '');
         if (mounted) context.go('/home');
-      } else {
-        // Webリダイレクト: ページ遷移するはずだが失敗した場合はリセット
-        await Future.delayed(const Duration(seconds: 3));
-        if (mounted) setState(() => _loading = false);
       }
+      // cred == null はリダイレクト中（ページ遷移するので何もしない）
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
