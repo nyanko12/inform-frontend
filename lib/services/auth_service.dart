@@ -9,12 +9,6 @@ class AuthService {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
 
-  // モバイルブラウザ判定（iOS/Android上のWebView・ブラウザ）
-  bool get _isMobileWeb =>
-      kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
-
   Future<String?> getIdToken() async {
     return await _auth.currentUser?.getIdToken();
   }
@@ -30,12 +24,13 @@ class AuthService {
   Future<UserCredential?> signInWithGoogle() async {
     if (kIsWeb) {
       final provider = GoogleAuthProvider();
-      if (_isMobileWeb) {
-        // モバイルブラウザはポップアップがブロックされるためリダイレクト方式
+      // popupを試みて失敗したらredirectにフォールバック
+      try {
+        return await _auth.signInWithPopup(provider);
+      } catch (_) {
         await _auth.signInWithRedirect(provider);
-        return null; // リダイレクト後に getRedirectResult() で受け取る
+        return null;
       }
-      return _auth.signInWithPopup(provider);
     }
 
     if (_googleSignIn == null) return null;
