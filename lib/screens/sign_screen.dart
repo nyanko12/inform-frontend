@@ -16,6 +16,30 @@ class _SignScreenState extends ConsumerState<SignScreen> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    _checkRedirectResult();
+  }
+
+  // モバイルブラウザのリダイレクト後に呼ばれる
+  Future<void> _checkRedirectResult() async {
+    final auth = ref.read(authServiceProvider);
+    final cred = await auth.getRedirectResult();
+    if (cred == null || !mounted) return;
+    setState(() => _loading = true);
+    try {
+      final api = ref.read(apiServiceProvider);
+      final token = await auth.getIdToken();
+      if (token != null) api.setAuthToken(token);
+      final user = cred.user;
+      if (user != null) await api.register(user.uid, user.email ?? '');
+      if (mounted) context.go('/home');
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+    }
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     super.dispose();
