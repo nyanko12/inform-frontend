@@ -78,20 +78,17 @@ class _SignScreenState extends ConsumerState<SignScreen> {
     try {
       final auth = ref.read(authServiceProvider);
       final cred = await auth.signInWithGoogle();
+      // Web: cred == null のためリダイレクトが発生、ページ遷移するのでここには戻らない
       if (cred != null) {
         final api = ref.read(apiServiceProvider);
         final token = await auth.getIdToken();
         if (token != null) api.setAuthToken(token);
         final user = cred.user;
-        if (user != null) {
-          await api.register(user.uid, user.email ?? '');
-        }
+        if (user != null) await api.register(user.uid, user.email ?? '');
         if (mounted) context.go('/home');
       }
     } catch (e) {
-      setState(() { _error = e.toString(); });
-    } finally {
-      if (mounted) setState(() { _loading = false; });
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
     }
   }
 
@@ -152,8 +149,10 @@ class _SignScreenState extends ConsumerState<SignScreen> {
               SizedBox(
                 height: 48,
                 child: OutlinedButton.icon(
-                  icon: const Text('G', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
-                  label: const Text('Googleで続行'),
+                  icon: _loading
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Text('G', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                  label: Text(_loading ? 'Googleにリダイレクト中...' : 'Googleで続行'),
                   onPressed: _loading ? null : _signInWithGoogle,
                 ),
               ),

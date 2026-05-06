@@ -23,14 +23,9 @@ class AuthService {
 
   Future<UserCredential?> signInWithGoogle() async {
     if (kIsWeb) {
-      final provider = GoogleAuthProvider();
-      // popupを試みて失敗したらredirectにフォールバック
-      try {
-        return await _auth.signInWithPopup(provider);
-      } catch (_) {
-        await _auth.signInWithRedirect(provider);
-        return null;
-      }
+      // Web（PC・モバイル共通）はリダイレクト方式で確実に動作させる
+      await _auth.signInWithRedirect(GoogleAuthProvider());
+      return null; // リダイレクト後に getRedirectResult() で受け取る
     }
 
     if (_googleSignIn == null) return null;
