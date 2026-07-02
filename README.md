@@ -74,7 +74,7 @@
 | 認証 | Firebase Admin SDK (ID トークン検証) |
 | プッシュ配信 | Firebase Cloud Messaging (FCM) |
 | スケジューラ | robfig/cron v3（毎朝 08:00 JST） |
-| 外部 API | 楽天市場 API |
+| 外部 API | Yahoo API |
 | デプロイ | Railway (Nixpacks) |
 
 ---
